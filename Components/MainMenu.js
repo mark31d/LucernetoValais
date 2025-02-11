@@ -8,18 +8,35 @@ import {
   Modal,
   ImageBackground,
   ScrollView,
-  Dimensions
+  Dimensions,
+  SafeAreaView
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import MapView, { Marker } from 'react-native-maps';
 
 // Background & default avatar
 const backgroundImage = require('../assets/background.jpg');
-const defaultProfileImage = require('../assets/emoji.png'); // <-- Наш дефолтный аватар
+const defaultProfileImage = require('../assets/emoji.png');
 
 const GOLD = '#FFD700';
 const DARK_RED = '#8B0000';
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+// Получаем размеры экрана
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+// Примерная пропорция, чтобы упростить понимание
+// Можно менять по вкусу
+const CARD_WIDTH = SCREEN_WIDTH * 0.75;          // 75% ширины экрана
+const CARD_PADDING = SCREEN_WIDTH * 0.03;        // отступы внутри карточки
+const CARD_RADIUS = SCREEN_WIDTH * 0.03;         // радиус скругления
+const CARD_IMAGE_HEIGHT = SCREEN_HEIGHT * 0.18;  // высота картинки
+const MAP_HEIGHT = SCREEN_HEIGHT * 0.2;          // высота карты
+
+// Размеры для верхних блоков
+const PROFILE_SIZE = SCREEN_WIDTH * 0.35;   // Аватар
+const BUTTON_SIZE = SCREEN_WIDTH * 0.35;    // Кнопка справа (Collectible)
+
+// Пример массива достопримечательностей (здесь пустой)
 
 const attractions = [
   {
@@ -276,6 +293,7 @@ const attractions = [
   }
 ];
 
+
 const MainMenu = ({ navigation }) => {
   const [showTutorial, setShowTutorial] = useState(true);
   const [tutorialStep, setTutorialStep] = useState(0);
@@ -284,18 +302,16 @@ const MainMenu = ({ navigation }) => {
   const [profileImage, setProfileImage] = useState(defaultProfileImage);
 
   const tutorialPages = [
-    'Historical Cards: When visiting an attraction, you must take a quiz. After completing the quiz, a collectible card with a brief history of the place is "unlocked."',
-    'Trivia: A quiz with questions about Switzerland is launched for new locations. You must complete the quiz to unlock the secret places of the location and receive a collectible card. You can also play the quiz just for fun in the main menu of the app.',
-    'Secret Locations: By successfully completing the quiz of 10 questions at each attraction, you will unlock 3 secret places at that location.'
+    'Historical Cards: When visiting an attraction, you must take a quiz. After completing the quiz, a collectible card is "unlocked."',
+    'Trivia: A quiz about Switzerland is launched for new locations. Complete it to unlock secret places and get a collectible card!',
+    'Secret Locations: By completing each quiz (10 questions), you unlock 3 secret places for that location.'
   ];
 
-  // Load avatar (if saved in Profile) from AsyncStorage
+  // Загрузка аватара (если он сохранён в AsyncStorage)
   useEffect(() => {
     const loadAvatar = async () => {
       try {
         const storedAvatar = await AsyncStorage.getItem('avatar');
-        // Если в хранилище нет аватара или там 'default', 
-        // оставляем дефолт (emoji.png)
         if (storedAvatar && storedAvatar !== 'default') {
           setProfileImage({ uri: storedAvatar });
         } else {
@@ -311,137 +327,135 @@ const MainMenu = ({ navigation }) => {
   return (
     <ImageBackground source={backgroundImage} style={styles.background}>
       <View style={styles.overlay} />
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-    
-        <View style={styles.settingsContainer}>
-          <TouchableOpacity
-            style={styles.settingsButton}
-            onPress={() => navigation.navigate('Settings')}
-          >
-            <Text style={styles.settingsText}>Settings</Text>
-          </TouchableOpacity>
-        </View>
+      {/* SafeAreaView для учёта вырезов экрана */}
+      <SafeAreaView style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          {/* Кнопка Settings (справа сверху) */}
+          <View style={styles.settingsContainer}>
+            <TouchableOpacity
+              style={styles.settingsButton}
+              onPress={() => navigation.navigate('Settings')}
+            >
+              <Text style={styles.settingsText}>Settings</Text>
+            </TouchableOpacity>
+          </View>
 
-        
-        <View style={styles.topRow}>
-          
-          <TouchableOpacity
-            style={styles.profileContainer}
-            onPress={() => navigation.navigate('Profile')}
-          >
-            <Image source={profileImage} style={styles.profileImage} />
-          </TouchableOpacity>
+          {/* Верхний ряд: Аватар и Collectible Cards */}
+          <View style={styles.topRow}>
+            <TouchableOpacity
+              style={styles.profileContainer}
+              onPress={() => navigation.navigate('Profile')}
+            >
+              <Image source={profileImage} style={styles.profileImage} />
+            </TouchableOpacity>
 
-         
-          <TouchableOpacity
-            style={styles.collectibleButton}
-            onPress={() => navigation.navigate('CollectibleCards')}
-          >
-            <Text style={styles.buttonText}>Collectible Cards</Text>
-          </TouchableOpacity>
-        </View>        
-        <View style={styles.horizontalScrollWrapper}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.horizontalScrollContent}
-          >
-            {attractions.map((item, index) => (
-              
-              <TouchableOpacity
-                key={index}
-                style={styles.card}
-                onPress={() => {
-                  navigation.navigate('AttractionScreen', { ...item });
-                }}
-              >
-                
-                <Image source={item.image} style={styles.attractionImage} />
+            <TouchableOpacity
+              style={styles.collectibleButton}
+              onPress={() => navigation.navigate('CollectibleCards')}
+            >
+              <Text style={styles.buttonText}>Collectible Cards</Text>
+            </TouchableOpacity>
+          </View>{/* Горизонтальный скролл с достопримечательностями */}
+          <View style={styles.horizontalScrollWrapper}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalScrollContent}
+            >
+              {attractions.map((item, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.card}
+                  onPress={() => {
+                    navigation.navigate('AttractionScreen', { ...item });
+                  }}
+                >
+                  {/* Картинка */}
+                  <Image source={item.image} style={styles.attractionImage} />
 
-               
-                <Text style={styles.cardTitle}>{item.name}</Text>
+                  {/* Название достопримечательности */}
+                  <Text style={styles.cardTitle}>{item.name}</Text>
 
-                
-                <View style={styles.mapContainer}>
-                  <MapView
-                    style={styles.map}
-                    initialRegion={{
-                      latitude: item.lat,
-                      longitude: item.lng,
-                      latitudeDelta: 0.1,
-                      longitudeDelta: 0.1
-                    }}
-                  >
-                    <Marker
-                      coordinate={{ latitude: item.lat, longitude: item.lng }}
-                      title={item.name}
-                      description={item.address}
-                    />
-                  </MapView>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-
-       
-        <View style={styles.rowButtons}>
-          <TouchableOpacity
-            style={[styles.halfWidthButton, { marginRight: 5 }]}
-            onPress={() => navigation.navigate('QuizScreen')}
-          >
-            <Text style={styles.buttonText}>Start Trivia</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.halfWidthButton, { marginLeft: 5 }]}
-            onPress={() => navigation.navigate('Folder')}
-          >
-            <Text style={styles.buttonText}>Folder</Text>
-          </TouchableOpacity>
-        </View>
-
-       
-        {showTutorial && (
-          <Modal transparent visible={showTutorial}>
-            <View style={styles.modalOverlay}>
-              <View style={styles.modalContainer}>
-                <Text style={styles.modalText}>{tutorialPages[tutorialStep]}</Text>
-                <View style={styles.modalButtons}>
-                  {tutorialStep > 0 && (
-                    <TouchableOpacity
-                      style={[styles.modalButton, { marginRight: 10 }]}
-                      onPress={() => setTutorialStep(tutorialStep - 1)}
+                  {/* Карта с маркером */}
+                  <View style={styles.mapContainer}>
+                    <MapView
+                      style={styles.map}
+                      initialRegion={{
+                        latitude: item.lat,
+                        longitude: item.lng,
+                        latitudeDelta: 0.1,
+                        longitudeDelta: 0.1
+                      }}
                     >
-                      <Text style={styles.modalButtonText}>Back</Text>
-                    </TouchableOpacity>
-                  )}
-                  {tutorialStep < tutorialPages.length - 1 ? (
-                    <TouchableOpacity
-                      style={styles.modalButton}
-                      onPress={() => setTutorialStep(tutorialStep + 1)}
-                    >
-                      <Text style={styles.modalButtonText}>Next</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <TouchableOpacity
-                      style={styles.modalButton}
-                      onPress={() => setShowTutorial(false)}
-                    >
-                      <Text style={styles.modalButtonText}>OK</Text>
-                    </TouchableOpacity>
-                  )}
+                      <Marker
+                        coordinate={{ latitude: item.lat, longitude: item.lng }}
+                        title={item.name}
+                        description={item.address}
+                      />
+                    </MapView>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
+          {/* Нижняя панель: Start Trivia / Folder */}
+          <View style={styles.rowButtons}>
+            <TouchableOpacity
+              style={[styles.halfWidthButton, { marginRight: SCREEN_WIDTH * 0.01 }]}
+              onPress={() => navigation.navigate('QuizScreen')}
+            >
+              <Text style={styles.buttonText}>Start Trivia</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.halfWidthButton, { marginLeft: SCREEN_WIDTH * 0.01 }]}
+              onPress={() => navigation.navigate('Folder')}
+            >
+              <Text style={styles.buttonText}>Folder</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Модальное окно с туториалом */}
+          {showTutorial && (
+            <Modal transparent visible={showTutorial}>
+              <View style={styles.modalOverlay}>
+                <View style={styles.modalContainer}>
+                  <Text style={styles.modalText}>{tutorialPages[tutorialStep]}</Text>
+                  <View style={styles.modalButtons}>
+                    {tutorialStep > 0 && (
+                      <TouchableOpacity
+                        style={[styles.modalButton, { marginRight: SCREEN_WIDTH * 0.02 }]}
+                        onPress={() => setTutorialStep(tutorialStep - 1)}
+                      >
+                        <Text style={styles.modalButtonText}>Back</Text>
+                      </TouchableOpacity>
+                    )}
+                    {tutorialStep < tutorialPages.length - 1 ? (
+                      <TouchableOpacity
+                        style={styles.modalButton}
+                        onPress={() => setTutorialStep(tutorialStep + 1)}
+                      >
+                        <Text style={styles.modalButtonText}>Next</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <TouchableOpacity
+                        style={styles.modalButton}
+                        onPress={() => setShowTutorial(false)}
+                      >
+                        <Text style={styles.modalButtonText}>OK</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 </View>
               </View>
-            </View>
-          </Modal>
-        )}
-      </ScrollView>
+            </Modal>
+          )}
+        </ScrollView>
+      </SafeAreaView>
     </ImageBackground>
   );
-};
-
-
-const styles = StyleSheet.create({
+};const styles = StyleSheet.create({
+  /* Фон */
   background: {
     flex: 1,
     resizeMode: 'cover'
@@ -449,45 +463,48 @@ const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject
   },
+  /* Общий контейнер скролла */
   scrollContent: {
     flexGrow: 1,
-    padding: 20,
+    padding: SCREEN_WIDTH * 0.05,   // отступы зависят от ширины экрана
     alignItems: 'center'
-  }, 
+  },
+
+  /* Блок Settings */
   settingsContainer: {
     width: '100%',
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    marginBottom: 10
+    marginBottom: SCREEN_WIDTH * 0.02
   },
   settingsButton: {
     backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    borderWidth: 2,
+    paddingVertical: SCREEN_WIDTH * 0.03,
+    paddingHorizontal: SCREEN_WIDTH * 0.04,
+    borderRadius: SCREEN_WIDTH * 0.03,
+    borderWidth: SCREEN_WIDTH * 0.005,
     borderColor: GOLD
   },
   settingsText: {
     color: GOLD,
     fontWeight: 'bold',
-    fontSize: 18
+    fontSize: SCREEN_WIDTH * 0.045
   },
 
-  /* Top Row: Profile + Collectible Cards */
+  /* Верхний ряд: Профиль + Collectible Cards */
   topRow: {
     width: '100%',
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    marginVertical: 20
+    marginVertical: SCREEN_WIDTH * 0.05
   },
   profileContainer: {
-    width: 150,
-    height: 150,
-    borderWidth: 2,
+    width: PROFILE_SIZE,
+    height: PROFILE_SIZE,
+    borderWidth: SCREEN_WIDTH * 0.005,
     borderColor: GOLD,
-    borderRadius: 20,
+    borderRadius: SCREEN_WIDTH * 0.05,
     overflow: 'hidden'
   },
   profileImage: {
@@ -496,87 +513,86 @@ const styles = StyleSheet.create({
     resizeMode: 'cover'
   },
   collectibleButton: {
-    width: 150,
-    height: 150,
+    width: BUTTON_SIZE,
+    height: BUTTON_SIZE,
     backgroundColor: DARK_RED,
-    borderRadius: 20,
-    borderWidth: 2,
+    borderRadius: SCREEN_WIDTH * 0.05,
+    borderWidth: SCREEN_WIDTH * 0.005,
     borderColor: GOLD,
     justifyContent: 'center',
     alignItems: 'center'
   },
   buttonText: {
     color: GOLD,
-    fontSize: 20,
+    fontSize: SCREEN_WIDTH * 0.05,
     fontWeight: 'bold',
     textAlign: 'center'
   },
 
-  /* Horizontal scroll for the attractions */
+  /* Горизонтальный скролл */
   horizontalScrollWrapper: {
     width: '100%',
-    marginVertical: 10
+    marginVertical: SCREEN_WIDTH * 0.03
   },
   horizontalScrollContent: {
-    paddingLeft: 10,
-    paddingRight: 10
+    paddingLeft: SCREEN_WIDTH * 0.02,
+    paddingRight: SCREEN_WIDTH * 0.02
   },
   card: {
-    width: 280,
-    borderWidth: 2,
+    width: CARD_WIDTH, // ~75% ширины экрана
+    borderWidth: SCREEN_WIDTH * 0.003,
     borderColor: GOLD,
-    borderRadius: 12,
+    borderRadius: CARD_RADIUS,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    padding: 10,
-    marginRight: 12,
+    padding: CARD_PADDING,
+    marginRight: SCREEN_WIDTH * 0.03,
     alignItems: 'center'
   },
   attractionImage: {
     width: '100%',
-    height: 140,
+    height: CARD_IMAGE_HEIGHT,
     resizeMode: 'cover',
-    borderRadius: 6,
-    marginBottom: 8
+    borderRadius: SCREEN_WIDTH * 0.02,
+    marginBottom: SCREEN_WIDTH * 0.02
   },
   cardTitle: {
-    fontSize: 18,
+    fontSize: SCREEN_WIDTH * 0.048,
     fontWeight: 'bold',
     color: GOLD,
-    marginBottom: 4,
+    marginBottom: SCREEN_WIDTH * 0.02,
     textAlign: 'center'
   },
   mapContainer: {
     width: '100%',
-    height: 150,
-    marginTop: 8,
-    borderRadius: 8,
+    height: MAP_HEIGHT,
+    marginTop: SCREEN_WIDTH * 0.02,
+    borderRadius: SCREEN_WIDTH * 0.02,
     overflow: 'hidden',
-    borderWidth: 1,
+    borderWidth: SCREEN_WIDTH * 0.003,
     borderColor: GOLD
   },
   map: {
     width: '100%',
     height: '100%'
   },
-  /* Bottom Row: Trivia & Folder */
+
+  /* Нижняя панель */
   rowButtons: {
     flexDirection: 'row',
     width: '100%',
-    marginTop: 20,
-    marginBottom: 40,
+    marginTop: SCREEN_WIDTH * 0.05,
+    marginBottom: SCREEN_WIDTH * 0.08,
     justifyContent: 'center'
   },
   halfWidthButton: {
     flex: 1,
     backgroundColor: DARK_RED,
-    paddingVertical: 16,
-    borderRadius: 10,
-    borderWidth: 2,
+    paddingVertical: SCREEN_WIDTH * 0.04,
+    borderRadius: SCREEN_WIDTH * 0.03,
+    borderWidth: SCREEN_WIDTH * 0.005,
     borderColor: GOLD,
     alignItems: 'center'
-  },
-
-  /* Tutorial Modal */
+  },/* Модальное окно (туториал) */
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -586,15 +602,15 @@ const styles = StyleSheet.create({
   modalContainer: {
     width: '85%',
     backgroundColor: 'rgba(43,43,43,0.95)',
-    borderWidth: 2,
+    borderWidth: SCREEN_WIDTH * 0.005,
     borderColor: GOLD,
-    borderRadius: 10,
-    padding: 20
+    borderRadius: SCREEN_WIDTH * 0.03,
+    padding: SCREEN_WIDTH * 0.05
   },
   modalText: {
     color: GOLD,
-    fontSize: 18,
-    marginBottom: 20
+    fontSize: SCREEN_WIDTH * 0.045,
+    marginBottom: SCREEN_WIDTH * 0.05
   },
   modalButtons: {
     flexDirection: 'row',
@@ -602,16 +618,16 @@ const styles = StyleSheet.create({
   },
   modalButton: {
     backgroundColor: DARK_RED,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    borderWidth: 2,
+    paddingVertical: SCREEN_WIDTH * 0.03,
+    paddingHorizontal: SCREEN_WIDTH * 0.04,
+    borderRadius: SCREEN_WIDTH * 0.03,
+    borderWidth: SCREEN_WIDTH * 0.005,
     borderColor: GOLD
   },
   modalButtonText: {
     color: GOLD,
     fontWeight: 'bold',
-    fontSize: 16
+    fontSize: SCREEN_WIDTH * 0.04
   }
 });
 
