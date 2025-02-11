@@ -14,29 +14,28 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import MapView, { Marker } from 'react-native-maps';
 
-// Background & default avatar
 const backgroundImage = require('../assets/background.jpg');
 const defaultProfileImage = require('../assets/emoji.png');
 
 const GOLD = '#FFD700';
 const DARK_RED = '#8B0000';
 
-// Получаем размеры экрана
+
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-// Примерная пропорция, чтобы упростить понимание
-// Можно менять по вкусу
-const CARD_WIDTH = SCREEN_WIDTH * 0.75;          // 75% ширины экрана
-const CARD_PADDING = SCREEN_WIDTH * 0.03;        // отступы внутри карточки
-const CARD_RADIUS = SCREEN_WIDTH * 0.03;         // радиус скругления
-const CARD_IMAGE_HEIGHT = SCREEN_HEIGHT * 0.18;  // высота картинки
-const MAP_HEIGHT = SCREEN_HEIGHT * 0.2;          // высота карты
 
-// Размеры для верхних блоков
-const PROFILE_SIZE = SCREEN_WIDTH * 0.35;   // Аватар
-const BUTTON_SIZE = SCREEN_WIDTH * 0.35;    // Кнопка справа (Collectible)
 
-// Пример массива достопримечательностей (здесь пустой)
+const CARD_WIDTH = SCREEN_WIDTH * 0.75;         
+const CARD_PADDING = SCREEN_WIDTH * 0.03;       
+const CARD_RADIUS = SCREEN_WIDTH * 0.03;       
+const CARD_IMAGE_HEIGHT = SCREEN_HEIGHT * 0.18; 
+const MAP_HEIGHT = SCREEN_HEIGHT * 0.2;         
+
+
+const PROFILE_SIZE = SCREEN_WIDTH * 0.35;  
+const BUTTON_SIZE = SCREEN_WIDTH * 0.35;   
+
+
 
 const attractions = [
   {
@@ -298,7 +297,6 @@ const MainMenu = ({ navigation }) => {
   const [showTutorial, setShowTutorial] = useState(true);
   const [tutorialStep, setTutorialStep] = useState(0);
 
-  // По умолчанию ставим дефолтный аватар
   const [profileImage, setProfileImage] = useState(defaultProfileImage);
 
   const tutorialPages = [
@@ -307,7 +305,7 @@ const MainMenu = ({ navigation }) => {
     'Secret Locations: By completing each quiz (10 questions), you unlock 3 secret places for that location.'
   ];
 
-  // Загрузка аватара (если он сохранён в AsyncStorage)
+  
   useEffect(() => {
     const loadAvatar = async () => {
       try {
@@ -327,10 +325,10 @@ const MainMenu = ({ navigation }) => {
   return (
     <ImageBackground source={backgroundImage} style={styles.background}>
       <View style={styles.overlay} />
-      {/* SafeAreaView для учёта вырезов экрана */}
+
       <SafeAreaView style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          {/* Кнопка Settings (справа сверху) */}
+    
           <View style={styles.settingsContainer}>
             <TouchableOpacity
               style={styles.settingsButton}
@@ -340,7 +338,7 @@ const MainMenu = ({ navigation }) => {
             </TouchableOpacity>
           </View>
 
-          {/* Верхний ряд: Аватар и Collectible Cards */}
+     
           <View style={styles.topRow}>
             <TouchableOpacity
               style={styles.profileContainer}
@@ -355,7 +353,7 @@ const MainMenu = ({ navigation }) => {
             >
               <Text style={styles.buttonText}>Collectible Cards</Text>
             </TouchableOpacity>
-          </View>{/* Горизонтальный скролл с достопримечательностями */}
+          </View>
           <View style={styles.horizontalScrollWrapper}>
             <ScrollView
               horizontal
@@ -370,13 +368,13 @@ const MainMenu = ({ navigation }) => {
                     navigation.navigate('AttractionScreen', { ...item });
                   }}
                 >
-                  {/* Картинка */}
+                 
                   <Image source={item.image} style={styles.attractionImage} />
 
-                  {/* Название достопримечательности */}
+                 
                   <Text style={styles.cardTitle}>{item.name}</Text>
 
-                  {/* Карта с маркером */}
+                
                   <View style={styles.mapContainer}>
                     <MapView
                       style={styles.map}
@@ -399,7 +397,7 @@ const MainMenu = ({ navigation }) => {
             </ScrollView>
           </View>
 
-          {/* Нижняя панель: Start Trivia / Folder */}
+         
           <View style={styles.rowButtons}>
             <TouchableOpacity
               style={[styles.halfWidthButton, { marginRight: SCREEN_WIDTH * 0.01 }]}
@@ -415,7 +413,7 @@ const MainMenu = ({ navigation }) => {
             </TouchableOpacity>
           </View>
 
-          {/* Модальное окно с туториалом */}
+         
           {showTutorial && (
             <Modal transparent visible={showTutorial}>
               <View style={styles.modalOverlay}>
@@ -455,7 +453,7 @@ const MainMenu = ({ navigation }) => {
     </ImageBackground>
   );
 };const styles = StyleSheet.create({
-  /* Фон */
+ 
   background: {
     flex: 1,
     resizeMode: 'cover'
@@ -463,14 +461,14 @@ const MainMenu = ({ navigation }) => {
   overlay: {
     ...StyleSheet.absoluteFillObject
   },
-  /* Общий контейнер скролла */
+  
   scrollContent: {
     flexGrow: 1,
-    padding: SCREEN_WIDTH * 0.05,   // отступы зависят от ширины экрана
+    padding: SCREEN_WIDTH * 0.05,  
     alignItems: 'center'
   },
 
-  /* Блок Settings */
+  
   settingsContainer: {
     width: '100%',
     flexDirection: 'row',
@@ -491,7 +489,7 @@ const MainMenu = ({ navigation }) => {
     fontSize: SCREEN_WIDTH * 0.045
   },
 
-  /* Верхний ряд: Профиль + Collectible Cards */
+
   topRow: {
     width: '100%',
     flexDirection: 'row',
@@ -529,7 +527,7 @@ const MainMenu = ({ navigation }) => {
     textAlign: 'center'
   },
 
-  /* Горизонтальный скролл */
+  
   horizontalScrollWrapper: {
     width: '100%',
     marginVertical: SCREEN_WIDTH * 0.03
@@ -539,7 +537,7 @@ const MainMenu = ({ navigation }) => {
     paddingRight: SCREEN_WIDTH * 0.02
   },
   card: {
-    width: CARD_WIDTH, // ~75% ширины экрана
+    width: CARD_WIDTH, 
     borderWidth: SCREEN_WIDTH * 0.003,
     borderColor: GOLD,
     borderRadius: CARD_RADIUS,
@@ -576,7 +574,7 @@ const MainMenu = ({ navigation }) => {
     height: '100%'
   },
 
-  /* Нижняя панель */
+  
   rowButtons: {
     flexDirection: 'row',
     width: '100%',
@@ -592,7 +590,7 @@ const MainMenu = ({ navigation }) => {
     borderWidth: SCREEN_WIDTH * 0.005,
     borderColor: GOLD,
     alignItems: 'center'
-  },/* Модальное окно (туториал) */
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
