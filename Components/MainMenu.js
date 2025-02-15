@@ -9,10 +9,13 @@ import {
   ImageBackground,
   ScrollView,
   Dimensions,
-  SafeAreaView
+  SafeAreaView,
+  TextInput,
+  Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import MapView, { Marker } from 'react-native-maps';
+import { launchImageLibrary } from 'react-native-image-picker';
 
 const backgroundImage = require('../assets/background.jpg');
 const defaultProfileImage = require('../assets/emoji.png');
@@ -20,21 +23,17 @@ const defaultProfileImage = require('../assets/emoji.png');
 const GOLD = '#FFD700';
 const DARK_RED = '#8B0000';
 
-
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
+// Card parameters for horizontal scroll
+const CARD_WIDTH = SCREEN_WIDTH * 0.85;
+const CARD_PADDING = SCREEN_WIDTH * 0.03;
+const CARD_RADIUS = SCREEN_WIDTH * 0.03;
+const CARD_IMAGE_HEIGHT = SCREEN_HEIGHT * 0.18;
+const MAP_HEIGHT = SCREEN_HEIGHT * 0.2;
 
-
-const CARD_WIDTH = SCREEN_WIDTH * 0.75;         
-const CARD_PADDING = SCREEN_WIDTH * 0.03;       
-const CARD_RADIUS = SCREEN_WIDTH * 0.03;       
-const CARD_IMAGE_HEIGHT = SCREEN_HEIGHT * 0.18; 
-const MAP_HEIGHT = SCREEN_HEIGHT * 0.2;         
-
-
-const PROFILE_SIZE = SCREEN_WIDTH * 0.35;  
-const BUTTON_SIZE = SCREEN_WIDTH * 0.35;   
-
+const PROFILE_SIZE = SCREEN_WIDTH * 0.4;
+const BUTTON_SIZE = SCREEN_WIDTH * 0.4;
 
 
 const attractions = [
@@ -296,8 +295,18 @@ const attractions = [
 const MainMenu = ({ navigation }) => {
   const [showTutorial, setShowTutorial] = useState(true);
   const [tutorialStep, setTutorialStep] = useState(0);
-
   const [profileImage, setProfileImage] = useState(defaultProfileImage);
+
+  // User-created attractions
+  const [customAttractions, setCustomAttractions] = useState([]);
+
+  // States for "Add Attraction" modal
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newDescription, setNewDescription] = useState('');
+  const [newLat, setNewLat] = useState('');
+  const [newLng, setNewLng] = useState('');
+  const [newImage, setNewImage] = useState(null);
 
   const tutorialPages = [
     'Historical Cards: When visiting an attraction, you must take a quiz. After completing the quiz, a collectible card is "unlocked."',
@@ -305,7 +314,6 @@ const MainMenu = ({ navigation }) => {
     'Secret Locations: By completing each quiz (10 questions), you unlock 3 secret places for that location.'
   ];
 
-  
   useEffect(() => {
     const loadAvatar = async () => {
       try {
@@ -316,29 +324,101 @@ const MainMenu = ({ navigation }) => {
           setProfileImage(defaultProfileImage);
         }
       } catch (error) {
-        console.error('Error loading avatar from storage:', error);
+        console.error('Error loading avatar:', error);
       }
     };
     loadAvatar();
   }, []);
 
+  useEffect(() => {
+    const loadCustomAttractions = async () => {
+      try {
+        const stored = await AsyncStorage.getItem('customAttractions');
+        if (stored) {
+          setCustomAttractions(JSON.parse(stored));
+        }
+      } catch (error) {
+        console.error('Error loading customAttractions:', error);
+      }
+    };
+    loadCustomAttractions();
+  }, []);
+
+  const saveCustomAttractions = async (data) => {
+    try {
+      await AsyncStorage.setItem('customAttractions', JSON.stringify(data));
+    } catch (error) {
+      console.error('Error saving customAttractions:', error);
+    }
+  };
+
+  // Function to pick an image for the attraction
+  const handlePickImage = () => {
+    launchImageLibrary(
+      {
+        mediaType: 'photo',
+        maxWidth: 1024,
+        maxHeight: 1024,
+        quality: 0.8,
+      },
+      (response) => {
+        if (response.didCancel) {
+          console.log('User cancelled image picker');
+        } else if (response.errorMessage) {
+          console.error('ImagePicker Error:', response.errorMessage);
+        } else if (response.assets && response.assets.length > 0) {
+          setNewImage({ uri: response.assets[0].uri });
+        }
+      }
+    );
+  };  // Save the new attraction
+  const handleAddAttraction = () => {
+    if (!newName.trim() || !newLat.trim() || !newLng.trim()) {
+      Alert.alert('Error', 'Please fill in Name, Latitude, and Longitude.');
+      return;
+    }
+    const latNum = parseFloat(newLat);
+    const lngNum = parseFloat(newLng);
+    if (isNaN(latNum) || isNaN(lngNum)) {
+      Alert.alert('Error', 'Latitude and Longitude must be valid numbers.');
+      return;
+    }
+    const newAttraction = {
+      name: newName,
+      description: newDescription,
+      lat: latNum,
+      lng: lngNum,
+      image: newImage ? newImage : require('../assets/emoji.png'),
+    };
+    const updated = [...customAttractions, newAttraction];
+    setCustomAttractions(updated);
+    saveCustomAttractions(updated);
+    // Reset fields
+    setNewName('');
+    setNewDescription('');
+    setNewLat('');
+    setNewLng('');
+    setNewImage(null);
+    setShowAddModal(false);
+  };
+
+  const fullList = [...attractions, ...customAttractions];
+
   return (
     <ImageBackground source={backgroundImage} style={styles.background}>
       <View style={styles.overlay} />
-
       <SafeAreaView style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
-    
+          {/* Settings Button */}
           <View style={styles.settingsContainer}>
             <TouchableOpacity
               style={styles.settingsButton}
               onPress={() => navigation.navigate('Settings')}
             >
-              <Text style={styles.settingsText}>Settings</Text>
+              <Text style={styles.settingsButtonText}>Settings</Text>
             </TouchableOpacity>
           </View>
-
-     
+          {/* Top Row: Profile and Collectible Cards */}
           <View style={styles.topRow}>
             <TouchableOpacity
               style={styles.profileContainer}
@@ -346,7 +426,6 @@ const MainMenu = ({ navigation }) => {
             >
               <Image source={profileImage} style={styles.profileImage} />
             </TouchableOpacity>
-
             <TouchableOpacity
               style={styles.collectibleButton}
               onPress={() => navigation.navigate('CollectibleCards')}
@@ -354,27 +433,32 @@ const MainMenu = ({ navigation }) => {
               <Text style={styles.buttonText}>Collectible Cards</Text>
             </TouchableOpacity>
           </View>
+          {/* Add Attraction Button */}
+          <TouchableOpacity
+            style={styles.addNewButton}
+            onPress={() => setShowAddModal(true)}
+          >
+            <Text style={styles.buttonText}>Add Attraction</Text>
+          </TouchableOpacity>
+          {/* Horizontal scroll of attractions */}
           <View style={styles.horizontalScrollWrapper}>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.horizontalScrollContent}
+              snapToInterval={CARD_WIDTH + SCREEN_WIDTH * 0.02}
+              decelerationRate="fast"
             >
-              {attractions.map((item, index) => (
+              {fullList.map((item, index) => (
                 <TouchableOpacity
                   key={index}
                   style={styles.card}
-                  onPress={() => {
-                    navigation.navigate('AttractionScreen', { ...item });
-                  }}
+                  onPress={() =>
+                    navigation.navigate('AttractionScreen', { ...item })
+                  }
                 >
-                 
                   <Image source={item.image} style={styles.attractionImage} />
-
-                 
                   <Text style={styles.cardTitle}>{item.name}</Text>
-
-                
                   <View style={styles.mapContainer}>
                     <MapView
                       style={styles.map}
@@ -382,47 +466,49 @@ const MainMenu = ({ navigation }) => {
                         latitude: item.lat,
                         longitude: item.lng,
                         latitudeDelta: 0.1,
-                        longitudeDelta: 0.1
+                        longitudeDelta: 0.1,
                       }}
                     >
                       <Marker
                         coordinate={{ latitude: item.lat, longitude: item.lng }}
                         title={item.name}
-                        description={item.address}
+                        description={item.description || ''}
                       />
                     </MapView>
                   </View>
                 </TouchableOpacity>
               ))}
             </ScrollView>
-          </View>
-
-         
+          </View>         
           <View style={styles.rowButtons}>
             <TouchableOpacity
-              style={[styles.halfWidthButton, { marginRight: SCREEN_WIDTH * 0.01 }]}
+              style={styles.halfWidthButton}
               onPress={() => navigation.navigate('QuizScreen')}
             >
               <Text style={styles.buttonText}>Start Trivia</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.halfWidthButton, { marginLeft: SCREEN_WIDTH * 0.01 }]}
+              style={styles.halfWidthButton}
               onPress={() => navigation.navigate('Folder')}
             >
               <Text style={styles.buttonText}>Folder</Text>
             </TouchableOpacity>
           </View>
-
-         
+          {/* Tutorial Modal */}
           {showTutorial && (
-            <Modal transparent visible={showTutorial}>
+            <Modal transparent visible={showTutorial} animationType="fade">
               <View style={styles.modalOverlay}>
                 <View style={styles.modalContainer}>
-                  <Text style={styles.modalText}>{tutorialPages[tutorialStep]}</Text>
+                  <Text style={styles.modalText}>
+                    {tutorialPages[tutorialStep]}
+                  </Text>
                   <View style={styles.modalButtons}>
                     {tutorialStep > 0 && (
                       <TouchableOpacity
-                        style={[styles.modalButton, { marginRight: SCREEN_WIDTH * 0.02 }]}
+                        style={[
+                          styles.modalButton,
+                          { marginRight: SCREEN_WIDTH * 0.015 },
+                        ]}
                         onPress={() => setTutorialStep(tutorialStep - 1)}
                       >
                         <Text style={styles.modalButtonText}>Back</Text>
@@ -448,54 +534,115 @@ const MainMenu = ({ navigation }) => {
               </View>
             </Modal>
           )}
+          {/* Add Attraction Modal (no secret spot fields) */}
+          <Modal visible={showAddModal} transparent animationType="slide">
+            <View style={styles.modalOverlay}>
+              <ScrollView contentContainerStyle={styles.modalScrollContainer}>
+                <View style={styles.addContainer}>
+                  <Text style={styles.modalText}>Add a New Attraction</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Name"
+                    placeholderTextColor="#888"
+                    value={newName}
+                    onChangeText={setNewName}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Description"
+                    placeholderTextColor="#888"
+                    value={newDescription}
+                    onChangeText={setNewDescription}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Latitude"
+                    placeholderTextColor="#888"
+                    value={newLat}
+                    onChangeText={setNewLat}
+                    keyboardType="numeric"
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Longitude"
+                    placeholderTextColor="#888"
+                    value={newLng}
+                    onChangeText={setNewLng}
+                    keyboardType="numeric"
+                  />
+                  <TouchableOpacity
+                    style={[styles.modalButton, { marginBottom: SCREEN_WIDTH * 0.03 }]}
+                    onPress={handlePickImage}
+                  >                    <Text style={styles.modalButtonText}>Pick Attraction Image</Text>
+                  </TouchableOpacity>
+                  {newImage && (
+                    <Image source={newImage} style={styles.modalImage} />
+                  )}
+                  <View style={styles.modalButtons}>
+                    <TouchableOpacity
+                      style={[
+                        styles.modalButton,
+                        { marginRight: SCREEN_WIDTH * 0.015 },
+                      ]}
+                      onPress={() => setShowAddModal(false)}
+                    >
+                      <Text style={styles.modalButtonText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.modalButton}
+                      onPress={handleAddAttraction}
+                    >
+                      <Text style={styles.modalButtonText}>Save Attraction</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </ScrollView>
+            </View>
+          </Modal>
         </ScrollView>
       </SafeAreaView>
     </ImageBackground>
   );
-};const styles = StyleSheet.create({
- 
+};
+
+const styles = StyleSheet.create({
   background: {
     flex: 1,
-    resizeMode: 'cover'
+    resizeMode: 'cover',
   },
   overlay: {
-    ...StyleSheet.absoluteFillObject
+    ...StyleSheet.absoluteFillObject,
   },
-  
   scrollContent: {
     flexGrow: 1,
-    padding: SCREEN_WIDTH * 0.05,  
-    alignItems: 'center'
+    padding: SCREEN_WIDTH * 0.05,
+    alignItems: 'center',
   },
-
-  
   settingsContainer: {
     width: '100%',
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginBottom: SCREEN_WIDTH * 0.02
+    marginBottom: SCREEN_WIDTH * 0.01,
   },
   settingsButton: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingVertical: SCREEN_WIDTH * 0.03,
-    paddingHorizontal: SCREEN_WIDTH * 0.04,
-    borderRadius: SCREEN_WIDTH * 0.03,
+    backgroundColor: DARK_RED,
+    paddingVertical: SCREEN_WIDTH * 0.06,
+    paddingHorizontal: SCREEN_WIDTH * 0.06,
+    borderRadius: SCREEN_WIDTH * 0.04,
     borderWidth: SCREEN_WIDTH * 0.005,
-    borderColor: GOLD
+    borderColor: GOLD,
+    width: '100%',
   },
-  settingsText: {
+  settingsButtonText: {
     color: GOLD,
     fontWeight: 'bold',
-    fontSize: SCREEN_WIDTH * 0.045
+    fontSize: SCREEN_WIDTH * 0.06,
+    textAlign: 'center',
   },
-
-
   topRow: {
     width: '100%',
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    marginVertical: SCREEN_WIDTH * 0.05
+    marginVertical: SCREEN_WIDTH * 0.03,
   },
   profileContainer: {
     width: PROFILE_SIZE,
@@ -503,12 +650,12 @@ const MainMenu = ({ navigation }) => {
     borderWidth: SCREEN_WIDTH * 0.005,
     borderColor: GOLD,
     borderRadius: SCREEN_WIDTH * 0.05,
-    overflow: 'hidden'
+    overflow: 'hidden',
   },
   profileImage: {
     width: '100%',
     height: '100%',
-    resizeMode: 'cover'
+    resizeMode: 'cover',
   },
   collectibleButton: {
     width: BUTTON_SIZE,
@@ -518,101 +665,124 @@ const MainMenu = ({ navigation }) => {
     borderWidth: SCREEN_WIDTH * 0.005,
     borderColor: GOLD,
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
+  },
+  addNewButton: {
+    backgroundColor: DARK_RED,
+    borderRadius: SCREEN_WIDTH * 0.03,
+    borderWidth: SCREEN_WIDTH * 0.005,
+    borderColor: GOLD,
+    paddingVertical: SCREEN_WIDTH * 0.06,
+    paddingHorizontal: SCREEN_WIDTH * 0.06,
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: SCREEN_WIDTH * 0.04,
+    marginTop: SCREEN_WIDTH * 0.02,
   },
   buttonText: {
     color: GOLD,
-    fontSize: SCREEN_WIDTH * 0.05,
+    fontSize: SCREEN_WIDTH * 0.06,
     fontWeight: 'bold',
-    textAlign: 'center'
+    textAlign: 'center',
   },
-
-  
   horizontalScrollWrapper: {
     width: '100%',
-    marginVertical: SCREEN_WIDTH * 0.03
+    marginVertical: SCREEN_WIDTH * 0.02,
   },
   horizontalScrollContent: {
     paddingLeft: SCREEN_WIDTH * 0.02,
-    paddingRight: SCREEN_WIDTH * 0.02
+    paddingRight: SCREEN_WIDTH * 0.02,
   },
   card: {
-    width: CARD_WIDTH, 
+    width: CARD_WIDTH,
     borderWidth: SCREEN_WIDTH * 0.003,
     borderColor: GOLD,
     borderRadius: CARD_RADIUS,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     padding: CARD_PADDING,
-    marginRight: SCREEN_WIDTH * 0.03,
-    alignItems: 'center'
+    marginRight: SCREEN_WIDTH * 0.02,
+    alignItems: 'center',
   },
   attractionImage: {
     width: '100%',
     height: CARD_IMAGE_HEIGHT,
     resizeMode: 'cover',
     borderRadius: SCREEN_WIDTH * 0.02,
-    marginBottom: SCREEN_WIDTH * 0.02
+    marginBottom: SCREEN_WIDTH * 0.02,
   },
   cardTitle: {
-    fontSize: SCREEN_WIDTH * 0.048,
+    fontSize: SCREEN_WIDTH * 0.05,
     fontWeight: 'bold',
     color: GOLD,
     marginBottom: SCREEN_WIDTH * 0.02,
-    textAlign: 'center'
+    textAlign: 'center',
   },
   mapContainer: {
     width: '100%',
     height: MAP_HEIGHT,
     marginTop: SCREEN_WIDTH * 0.02,
     borderRadius: SCREEN_WIDTH * 0.02,
-    overflow: 'hidden',
-    borderWidth: SCREEN_WIDTH * 0.003,
-    borderColor: GOLD
+    overflow: 'hidden',    borderWidth: SCREEN_WIDTH * 0.003,
+    borderColor: GOLD,
   },
   map: {
     width: '100%',
-    height: '100%'
+    height: '100%',
   },
-
-  
   rowButtons: {
     flexDirection: 'row',
     width: '100%',
-    marginTop: SCREEN_WIDTH * 0.05,
-    marginBottom: SCREEN_WIDTH * 0.08,
-    justifyContent: 'center'
+    marginTop: SCREEN_WIDTH * 0.03,
+    marginBottom: SCREEN_WIDTH * 0.04,
+    justifyContent: 'space-between',
   },
   halfWidthButton: {
-    flex: 1,
+    width: '48%',
     backgroundColor: DARK_RED,
-    paddingVertical: SCREEN_WIDTH * 0.04,
+    paddingVertical: SCREEN_WIDTH * 0.08,
     borderRadius: SCREEN_WIDTH * 0.03,
     borderWidth: SCREEN_WIDTH * 0.005,
     borderColor: GOLD,
-    alignItems: 'center'
+    alignItems: 'center',
   },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
+    padding: SCREEN_WIDTH * 0.05,
   },
-  modalContainer: {
-    width: '85%',
+  modalScrollContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addContainer: {
+    width: '100%',               
+    maxWidth: SCREEN_WIDTH,
+    maxHeight: SCREEN_HEIGHT * 0.7, 
     backgroundColor: 'rgba(43,43,43,0.95)',
     borderWidth: SCREEN_WIDTH * 0.005,
     borderColor: GOLD,
     borderRadius: SCREEN_WIDTH * 0.03,
-    padding: SCREEN_WIDTH * 0.05
+    padding: SCREEN_WIDTH * 0.05,
+  },
+  modalContainer: {
+    width: '100%',
+    backgroundColor: 'rgba(43,43,43,0.95)',
+    borderWidth: SCREEN_WIDTH * 0.005,
+    borderColor: GOLD,
+    borderRadius: SCREEN_WIDTH * 0.03,
+    padding: SCREEN_WIDTH * 0.05,
   },
   modalText: {
     color: GOLD,
     fontSize: SCREEN_WIDTH * 0.045,
-    marginBottom: SCREEN_WIDTH * 0.05
+    marginBottom: SCREEN_WIDTH * 0.05,
   },
   modalButtons: {
     flexDirection: 'row',
-    justifyContent: 'flex-end'
+    justifyContent: 'flex-end',
   },
   modalButton: {
     backgroundColor: DARK_RED,
@@ -620,13 +790,30 @@ const MainMenu = ({ navigation }) => {
     paddingHorizontal: SCREEN_WIDTH * 0.04,
     borderRadius: SCREEN_WIDTH * 0.03,
     borderWidth: SCREEN_WIDTH * 0.005,
-    borderColor: GOLD
+    borderColor: GOLD,
   },
   modalButtonText: {
     color: GOLD,
     fontWeight: 'bold',
-    fontSize: SCREEN_WIDTH * 0.04
-  }
+    fontSize: SCREEN_WIDTH * 0.05,
+  },
+  modalImage: {
+    width: '100%',              
+    height: SCREEN_HEIGHT * 0.2,   
+    marginBottom: SCREEN_WIDTH * 0.03,
+    borderRadius: SCREEN_WIDTH * 0.02,
+    resizeMode: 'contain',      
+  },
+  input: {
+    backgroundColor: '#FFF',
+    borderWidth: SCREEN_WIDTH * 0.003,
+    borderColor: GOLD,
+    borderRadius: SCREEN_WIDTH * 0.02,
+    marginBottom: SCREEN_WIDTH * 0.03,
+    color: DARK_RED,
+    paddingHorizontal: SCREEN_WIDTH * 0.04,
+    fontSize: SCREEN_WIDTH * 0.045,
+  },
 });
 
 export default MainMenu;

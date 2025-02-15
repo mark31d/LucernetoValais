@@ -218,7 +218,7 @@ const Profile = ({ navigation }) => {
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+
   },
   contentWrapper: {
     flex: 1,
